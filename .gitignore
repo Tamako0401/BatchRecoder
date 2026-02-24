@@ -1,0 +1,41 @@
+﻿# Build outputs
+bin/
+obj/
+*/bin/
+*/obj/
+
+# Visual Studio caches
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Rider
+.idea/
+
+# Mono
+*.log
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# FFmpeg artifacts generated at runtime
+ffmpeg.exe
+ffprobe.exe
+ffmpeg.zip
+ffmpeg_temp/
+*.recoded.tmp*
+
+# Processed outputs
+*.recoded.*
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Visual Studio Code
+.vscode/
+
