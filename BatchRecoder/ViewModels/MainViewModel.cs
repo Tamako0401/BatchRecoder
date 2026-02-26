@@ -56,6 +56,7 @@ namespace BatchRecoder.ViewModels
         public System.Collections.Generic.List<string> TargetResolutions => EncoderSettings.TargetResolutions;
         public System.Collections.Generic.List<int> AudioBitrates => EncoderSettings.AudioBitrates;
         public System.Collections.Generic.List<string> OutputFormats => EncoderSettings.OutputFormats;
+        public System.Collections.Generic.List<string> TargetFrameRates => EncoderSettings.TargetFrameRates;
 
         public string TargetDirectory
         {

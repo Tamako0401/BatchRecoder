@@ -123,6 +123,10 @@
                             </Grid>
                         </StackPanel>
 
+                        <TextBlock Text="目标帧率 (FPS):" Margin="0,10,0,2" />
+                        <ComboBox ItemsSource="{Binding TargetFrameRates}"
+                                  SelectedItem="{Binding Settings.TargetFrameRate}" />
+
                         <TextBlock Text="CRF (0-51):" Margin="0,10,0,2" />
                         <Grid>
                             <Slider Minimum="0" Maximum="51" Value="{Binding Settings.Crf}" TickFrequency="1"

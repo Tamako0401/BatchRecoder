@@ -20,6 +20,7 @@ namespace BatchRecoder.Models
         private int _customHeight = 1080;
         private string _profile = "high";
         private string _tune = "none";
+        private string _targetFrameRate = "Original";
 
         public string VideoEncoder
         {
@@ -152,6 +153,16 @@ namespace BatchRecoder.Models
             }
         }
 
+        public string TargetFrameRate
+        {
+            get => _targetFrameRate;
+            set
+            {
+                _targetFrameRate = value;
+                OnPropertyChanged(nameof(TargetFrameRate));
+            }
+        }
+
         public bool IsCustomResolution => TargetResolution == "Custom";
 
         // 可用选项
@@ -196,6 +207,19 @@ namespace BatchRecoder.Models
         };
         public static List<int> AudioBitrates { get; } = new List<int> { 64, 96, 128, 192, 256, 320 };
         public static List<string> OutputFormats { get; } = new List<string> { "mp4", "mkv", "avi", "mov" };
+        public static List<string> TargetFrameRates { get; } = new List<string>
+        {
+            "Original",
+            "23.976",
+            "24",
+            "29.97",
+            "30",
+            "50",
+            "59.94",
+            "60",
+            "120",
+            "Custom"
+        };
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -262,52 +286,72 @@ namespace BatchRecoder.Models
             }
 
 
-            // 分辨率处理
+            // 分辨率 + 帧率：统一形成一个滤镜链，避免出现多个 -vf/-filter:v
+            var filterParts = new List<string>();
+
             if (TargetResolution != "Original")
             {
                 if (TargetResolution == "Custom")
                 {
-                    sb.Append($"-vf scale={CustomWidth}:{CustomHeight} ");
+                    filterParts.Add($"scale={CustomWidth}:{CustomHeight}");
                 }
                 else if (TargetResolution.StartsWith("720p"))
                 {
-                    sb.Append("-vf scale=-2:720 ");
+                    filterParts.Add("scale=-2:720");
                 }
                 else if (TargetResolution.StartsWith("1080p"))
                 {
-                    sb.Append("-vf scale=-2:1080 ");
+                    filterParts.Add("scale=-2:1080");
                 }
                 else if (TargetResolution.StartsWith("2k"))
                 {
-                    sb.Append("-vf scale=-2:1440 ");
+                    filterParts.Add("scale=-2:1440");
                 }
                 else if (TargetResolution.StartsWith("4k"))
                 {
-                    sb.Append("-vf scale=-2:2160 ");
+                    filterParts.Add("scale=-2:2160");
                 }
                 else if (TargetResolution.StartsWith("16:9"))
                 {
-                     // Force 16:9 aspect ratio by scaling to the closest multiple of 2
-                     // scale='iw:trunc(iw/16*9/2)*2'
-                     sb.Append("-vf scale=iw:trunc(iw/16*9/2)*2 ");
+                    filterParts.Add("scale=iw:trunc(iw/16*9/2)*2");
                 }
                 else if (TargetResolution.StartsWith("16:10"))
                 {
-                     sb.Append("-vf scale=iw:trunc(iw/16*10/2)*2 ");
+                    filterParts.Add("scale=iw:trunc(iw/16*10/2)*2");
                 }
                 else
                 {
-                    // Existing logic for old items, or fallback
                     var resString = TargetResolution.Split(' ')[0];
                     if (resString.Contains("x"))
                     {
                         var parts = resString.Split('x');
                         if (parts.Length == 2)
                         {
-                            sb.Append($"-vf scale={parts[0]}:{parts[1]} ");
+                            filterParts.Add($"scale={parts[0]}:{parts[1]}");
                         }
                     }
                 }
+            }
+
+            // 帧率处理：使用滤镜 fps（更明确的重采样语义），与 scale 串联
+            // 注意：只对非 Original 生效；"Custom" 由用户直接输入框输入。
+            var fr = (TargetFrameRate ?? "Original").Trim();
+            if (!string.Equals(fr, "Original", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.Equals(fr, "Custom", StringComparison.OrdinalIgnoreCase))
+                {
+                    // UI 选择 Custom 但未填值时，不添加
+                }
+                else
+                {
+                    // 允许用户输入 23.976 / 30000/1001 等；这里不做苛刻校验，交给 ffmpeg。
+                    filterParts.Add($"fps={fr}");
+                }
+            }
+
+            if (filterParts.Count > 0)
+            {
+                sb.Append($"-filter:v \"{string.Join(",", filterParts)}\" ");
             }
 
             // 音频编码
@@ -337,3 +381,4 @@ namespace BatchRecoder.Models
         }
     }
 }
+
