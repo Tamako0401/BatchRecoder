@@ -4,7 +4,6 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:BatchRecoder.ViewModels"
-        xmlns:models="clr-namespace:BatchRecoder.Models"
         mc:Ignorable="d"
         Title="BatchRecoder" Height="600" Width="1000">
     <Window.DataContext>
@@ -26,16 +25,18 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Text="目标目录:" VerticalAlignment="Center" Margin="0,0,10,0" />
             <TextBox Grid.Column="1" Text="{Binding TargetDirectory, UpdateSourceTrigger=PropertyChanged}"
                      VerticalAlignment="Center" Margin="0,0,10,0" />
-            <Button Grid.Column="2" Content="扫描" Command="{Binding ScanCommand}" Width="80" Margin="0,0,10,0" />
-            <Button Grid.Column="3" Content="开始处理" Command="{Binding StartCommand}" Width="80" Margin="0,0,10,0" />
-            <Button Grid.Column="4" Content="停止" Command="{Binding StopCommand}" Width="80" />
-            <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="10,0,0,0">
-                <Button Content="暂停" Command="{Binding PauseCommand}" Width="80" Margin="0,0,10,0" />
-                <Button Content="继续" Command="{Binding ResumeCommand}" Width="80" />
+            <Button Grid.Column="2" Content="浏览" Command="{Binding BrowseTargetDirectoryCommand}" Width="60" Margin="0,0,10,0" />
+            <Button Grid.Column="3" Content="扫描" Command="{Binding ScanCommand}" Width="60" Margin="0,0,10,0" />
+            <Button Grid.Column="4" Content="开始处理" Command="{Binding StartCommand}" Width="80" Margin="0,0,10,0" />
+            <Button Grid.Column="5" Content="停止" Command="{Binding StopCommand}" Width="60" />
+            <StackPanel Grid.Column="6" Orientation="Horizontal" Margin="10,0,0,0">
+                <Button Content="暂停" Command="{Binding PauseCommand}" Width="60" Margin="0,0,10,0" />
+                <Button Content="继续" Command="{Binding ResumeCommand}" Width="60" />
             </StackPanel>
         </Grid>
 
@@ -93,11 +94,37 @@
 
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
 
-            <!-- 参数设置 -->
-            <GroupBox Header="编码参数" Grid.Column="2">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <!-- 右侧：输出目录设置与编码参数 -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 输出目录设置 -->
+                <GroupBox Header="输出目录" Grid.Row="0" Margin="0,0,0,5">
                     <StackPanel Margin="5">
-                        <TextBlock Text="视频编码器:" Margin="0,5,0,2" />
+                        <CheckBox Content="使用自定义输出目录" IsChecked="{Binding UseCustomOutputDirectory}" Margin="0,0,0,5" />
+                        
+                        <StackPanel Visibility="{Binding UseCustomOutputDirectory, Converter={StaticResource BooleanToVisibleConverter}}">
+                            <TextBlock Text="输出目录:" Margin="0,0,0,2" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding CustomOutputDirectory, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,5,0" />
+                                <Button Grid.Column="1" Content="浏览" Command="{Binding BrowseOutputDirectoryCommand}" Width="60" />
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- 编码参数 -->
+                <GroupBox Header="编码参数" Grid.Row="1">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="视频编码器:" Margin="0,5,0,2" />
                         <ComboBox ItemsSource="{Binding VideoEncoders}"
                                   SelectedItem="{Binding Settings.VideoEncoder}" />
 
@@ -168,11 +195,12 @@
                 </ScrollViewer>
             </GroupBox>
         </Grid>
-
-        <!-- 底部：日志 -->
-        <GroupBox Header="日志" Grid.Row="2">
-            <TextBox Text="{Binding LogText}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
-                     FontFamily="Consolas" />
-        </GroupBox>
     </Grid>
+
+    <!-- 底部：日志 -->
+    <GroupBox Grid.Row="2" Header="日志">
+        <TextBox Text="{Binding LogText}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" />
+    </GroupBox>
+</Grid>
 </Window>

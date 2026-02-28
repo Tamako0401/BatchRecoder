@@ -23,6 +23,7 @@ namespace BatchRecoder.Models
         private double _progress;
 
         private VideoStatus _status;
+        private string _customOutputDirectory;
 
         public string FilePath { get; set; }
         public string FileName => Path.GetFileName(FilePath);
@@ -30,6 +31,18 @@ namespace BatchRecoder.Models
         public string Directory => Path.GetDirectoryName(FilePath);
         public long FileSizeBytes { get; set; }
         public string FileSizeDisplay => FormatFileSize(FileSizeBytes);
+
+        // 自定义输出目录（可选，若为空则使用原目录）
+        public string CustomOutputDirectory
+        {
+            get => _customOutputDirectory;
+            set
+            {
+                _customOutputDirectory = value;
+                OnPropertyChanged(nameof(CustomOutputDirectory));
+                OnPropertyChanged(nameof(ProcessedFilePath));
+            }
+        }
 
         // 媒体信息
         public int Width { get; set; }
@@ -51,7 +64,7 @@ namespace BatchRecoder.Models
         public bool MediaInfoLoaded { get; set; }
 
         // 对应的已处理文件路径
-        public string ProcessedFilePath => GetProcessedFilePath(FilePath);
+        public string ProcessedFilePath => GetProcessedFilePath(FilePath, CustomOutputDirectory);
 
         public VideoStatus Status
         {
@@ -142,17 +155,21 @@ namespace BatchRecoder.Models
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public static string GetProcessedFilePath(string inputPath)
+        public static string GetProcessedFilePath(string inputPath, string customOutputDirectory = null)
         {
-            var dir = Path.GetDirectoryName(inputPath);
+            var dir = string.IsNullOrWhiteSpace(customOutputDirectory) 
+                ? Path.GetDirectoryName(inputPath) 
+                : customOutputDirectory;
             var name = Path.GetFileNameWithoutExtension(inputPath);
             var ext = Path.GetExtension(inputPath);
             return Path.Combine(dir, $"{name}{ProcessedSuffix}{ext}");
         }
 
-        public static string GetTemporaryFilePath(string inputPath)
+        public static string GetTemporaryFilePath(string inputPath, string customOutputDirectory = null)
         {
-            var dir = Path.GetDirectoryName(inputPath);
+            var dir = string.IsNullOrWhiteSpace(customOutputDirectory) 
+                ? Path.GetDirectoryName(inputPath) 
+                : customOutputDirectory;
             var name = Path.GetFileNameWithoutExtension(inputPath);
             var ext = Path.GetExtension(inputPath);
             return Path.Combine(dir, $"{name}{TemporarySuffix}{ext}");

@@ -177,10 +177,10 @@ namespace BatchRecoder.Core
 
         // Add to FFmpegRunner class
         public async Task<bool> EncodeAsync(VideoFileInfo video, EncoderSettings settings, Action<string> logCallback,
-            CancellationToken token)
+            CancellationToken token, string customOutputDirectory = null)
         {
-            var finalOutputPath = VideoFileInfo.GetProcessedFilePath(video.FilePath);
-            var tempOutputPath = VideoFileInfo.GetTemporaryFilePath(video.FilePath);
+            var finalOutputPath = VideoFileInfo.GetProcessedFilePath(video.FilePath, customOutputDirectory);
+            var tempOutputPath = VideoFileInfo.GetTemporaryFilePath(video.FilePath, customOutputDirectory);
             
             // Clean up existing temp file if any
             if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath);

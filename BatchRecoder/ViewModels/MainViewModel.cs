@@ -21,6 +21,8 @@ namespace BatchRecoder.ViewModels
         private string _logText = "";
         private string _targetDirectory;
         private bool _isPaused;
+        private bool _useCustomOutputDirectory;
+        private string _customOutputDirectory;
 
         public MainViewModel()
         {
@@ -35,17 +37,40 @@ namespace BatchRecoder.ViewModels
                 param => param is VideoFileInfo v && v.Status == VideoStatus.Failed && !IsProcessing);
             PauseCommand = new RelayCommand(_ => PauseProcessing(), _ => IsProcessing && !IsPaused);
             ResumeCommand = new RelayCommand(_ => ResumeProcessing(), _ => IsProcessing && IsPaused);
+            BrowseOutputDirectoryCommand = new RelayCommand(_ => BrowseOutputDirectory(),
+                _ => UseCustomOutputDirectory);
+            BrowseTargetDirectoryCommand = new RelayCommand(_ => BrowseTargetDirectory());
 
             // 启动时检查并显示 FFmpeg 版本
             Task.Run(async () =>
             {
                 var version = await _ffmpegRunner.GetFFmpegVersionAsync();
-                AppendLog($"当前 FFmpeg 版本: {version}");
+                AppendLog($"当前 FFmpeg 版本：{version}");
             });
         }
 
         public ObservableCollection<VideoFileInfo> VideoFiles { get; } = new ObservableCollection<VideoFileInfo>();
         public EncoderSettings Settings { get; } = new EncoderSettings();
+
+        public bool UseCustomOutputDirectory
+        {
+            get => _useCustomOutputDirectory;
+            set
+            {
+                _useCustomOutputDirectory = value;
+                OnPropertyChanged(nameof(UseCustomOutputDirectory));
+            }
+        }
+
+        public string CustomOutputDirectory
+        {
+            get => _customOutputDirectory;
+            set
+            {
+                _customOutputDirectory = value;
+                OnPropertyChanged(nameof(CustomOutputDirectory));
+            }
+        }
 
         // Instance properties for binding to resolve "Value cannot be null" in design time/preview
         public System.Collections.Generic.List<string> VideoEncoders => EncoderSettings.VideoEncoders;
@@ -114,6 +139,8 @@ namespace BatchRecoder.ViewModels
         public ICommand RetryCommand { get; }
         public ICommand PauseCommand { get; }
         public ICommand ResumeCommand { get; }
+        public ICommand BrowseOutputDirectoryCommand { get; }
+        public ICommand BrowseTargetDirectoryCommand { get; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -269,7 +296,7 @@ namespace BatchRecoder.ViewModels
                     video.ErrorMessage = null;
                     video.Eta = null;
 
-                    var success = await _ffmpegRunner.EncodeAsync(video, Settings, AppendLog, token);
+                    var success = await _ffmpegRunner.EncodeAsync(video, Settings, AppendLog, token, UseCustomOutputDirectory ? CustomOutputDirectory : null);
 
                     if (success)
                     {
@@ -365,7 +392,7 @@ namespace BatchRecoder.ViewModels
                 video.ErrorMessage = null;
                 video.Eta = null;
 
-                var success = await _ffmpegRunner.EncodeAsync(video, Settings, AppendLog, token);
+                var success = await _ffmpegRunner.EncodeAsync(video, Settings, AppendLog, token, UseCustomOutputDirectory ? CustomOutputDirectory : null);
 
                 if (success)
                 {
@@ -391,6 +418,38 @@ namespace BatchRecoder.ViewModels
         protected void OnPropertyChanged(string name)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+
+        private void BrowseOutputDirectory()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = "选择输出目录",
+                SelectedPath = !string.IsNullOrWhiteSpace(CustomOutputDirectory) && Directory.Exists(CustomOutputDirectory) 
+                    ? CustomOutputDirectory 
+                    : TargetDirectory
+            };
+
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                CustomOutputDirectory = dialog.SelectedPath;
+            }
+        }
+
+        private void BrowseTargetDirectory()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = "选择目标目录",
+                SelectedPath = !string.IsNullOrWhiteSpace(TargetDirectory) && Directory.Exists(TargetDirectory) 
+                    ? TargetDirectory 
+                    : Environment.CurrentDirectory
+            };
+
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                TargetDirectory = dialog.SelectedPath;
+            }
         }
     }
 
