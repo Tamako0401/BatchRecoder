@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BatchRecoder.Models;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace BatchRecoder.Core
 {
@@ -179,6 +180,14 @@ namespace BatchRecoder.Core
         public async Task<bool> EncodeAsync(VideoFileInfo video, EncoderSettings settings, Action<string> logCallback,
             CancellationToken token, string customOutputDirectory = null)
         {
+            // 确保 Duration 已加载，否则先加载媒体信息
+            if (!video.MediaInfoLoaded || video.Duration.TotalSeconds <= 0)
+            {
+                // 如果 ScanDirectoryAsync 还在运行或者未运行完毕，这里强制再加载一次以确保能获取 Duration
+                // 虽然略微影响启动速度，但能保证进度条正确
+                await LoadMediaInfoAsync(video);
+            }
+
             var finalOutputPath = VideoFileInfo.GetProcessedFilePath(video.FilePath, customOutputDirectory);
             var tempOutputPath = VideoFileInfo.GetTemporaryFilePath(video.FilePath, customOutputDirectory);
             
@@ -214,34 +223,32 @@ namespace BatchRecoder.Core
                         if (string.IsNullOrEmpty(e.Data)) return;
 
                         // 解析时间: time=00:00:05.12
-                        if (e.Data.Contains("time="))
+                        // 使用 Regex 提取更稳健
+                        var timeMatch = Regex.Match(e.Data, @"time=\s*(\d{2}:\d{2}:\d{2}\.\d+)");
+                        if (timeMatch.Success)
                         {
-                            var timeIndex = e.Data.IndexOf("time=", StringComparison.Ordinal);
-                            var timeStr = e.Data.Substring(timeIndex + 5, 11); // HH:mm:ss.ff
+                            var timeStr = timeMatch.Groups[1].Value;
                             if (TimeSpan.TryParse(timeStr, out var currentTime))
+                            {
                                 if (video.Duration.TotalSeconds > 0)
                                 {
                                     var progress = currentTime.TotalSeconds / video.Duration.TotalSeconds * 100;
                                     video.Progress = Math.Min(99.9, Math.Max(0, progress));
                                 }
+                            }
                         }
 
                         // 解析速度: speed=1.2x
-                        if (e.Data.Contains("speed="))
+                        var speedMatch = Regex.Match(e.Data, @"speed=\s*(\d+(\.\d+)?)x");
+                        if (speedMatch.Success)
                         {
-                            var speedIndex = e.Data.IndexOf("speed=", StringComparison.Ordinal);
-                            var endSpace = e.Data.IndexOf('x', speedIndex);
-                            if (endSpace > speedIndex)
+                            var speedStr = speedMatch.Groups[1].Value;
+                            if (double.TryParse(speedStr, out var speed) && speed > 0 &&
+                                video.Duration.TotalSeconds > 0 && video.Progress > 0)
                             {
-                                var speedStr = e.Data.Substring(speedIndex + 6, endSpace - speedIndex - 6).Trim();
-                                // 简单的 ETA 计算
-                                if (double.TryParse(speedStr, out var speed) && speed > 0 &&
-                                    video.Duration.TotalSeconds > 0 && video.Progress > 0)
-                                {
-                                    var remainingSeconds = video.Duration.TotalSeconds * (100 - video.Progress) / 100 /
-                                                           speed;
-                                    video.Eta = TimeSpan.FromSeconds(remainingSeconds).ToString(@"hh\:mm\:ss");
-                                }
+                                var remainingSeconds = video.Duration.TotalSeconds * (100 - video.Progress) / 100 /
+                                                       speed;
+                                video.Eta = TimeSpan.FromSeconds(remainingSeconds).ToString(@"hh\:mm\:ss");
                             }
                         }
                     };
