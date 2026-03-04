@@ -199,7 +199,7 @@
 
     <!-- 底部：日志 -->
     <GroupBox Grid.Row="2" Header="日志">
-        <TextBox Text="{Binding LogText}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+        <TextBox x:Name="LogTextBox" Text="{Binding LogText}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                  FontFamily="Consolas" />
     </GroupBox>
 </Grid>
