@@ -222,9 +222,9 @@ namespace BatchRecoder.Core
                     {
                         if (string.IsNullOrEmpty(e.Data)) return;
 
-                        // 解析时间: time=00:00:05.12
+                        // 解析时间: time=00:00:05.12 或 time=00:00:05
                         // 使用 Regex 提取更稳健
-                        var timeMatch = Regex.Match(e.Data, @"time=\s*(\d{2}:\d{2}:\d{2}\.\d+)");
+                        var timeMatch = Regex.Match(e.Data, @"time=\s*(\d{2}:\d{2}:\d{2}(\.\d+)?)");
                         if (timeMatch.Success)
                         {
                             var timeStr = timeMatch.Groups[1].Value;

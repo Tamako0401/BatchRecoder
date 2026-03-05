@@ -61,24 +61,24 @@
                           BorderThickness="1"
                           BorderBrush="#EEEEEE">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="*" />
-                        <DataGridTemplateColumn Header="状态" Width="Auto">
+                        <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="*" MinWidth="150" />
+                        <DataGridTemplateColumn Header="状态" Width="Auto" MinWidth="80" MaxWidth="200">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding StatusDisplay}" Foreground="{Binding StatusColor}"
                                                FontWeight="Bold" VerticalAlignment="Center"
-                                               HorizontalAlignment="Center" Margin="5,0"/>
+                                               HorizontalAlignment="Center" Margin="5,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding StatusDisplay}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="进度" Binding="{Binding Progress, StringFormat={}{0:F1}%}" Width="Auto" />
-                        <DataGridTextColumn Header="分辨率" Binding="{Binding ResolutionDisplay}" Width="Auto" />
-                        <DataGridTextColumn Header="帧率" Binding="{Binding FrameRateDisplay}" Width="Auto" />
-                        <DataGridTextColumn Header="码率" Binding="{Binding VideoBitrateDisplay}" Width="Auto" />
-                        <DataGridTextColumn Header="时长" Binding="{Binding DurationDisplay}" Width="Auto" />
-                        <DataGridTextColumn Header="大小" Binding="{Binding FileSizeDisplay}" Width="Auto" />
-                        <DataGridTextColumn Header="剩余时间" Binding="{Binding Eta}" Width="Auto" />
-                        <DataGridTemplateColumn Header="操作" Width="Auto">
+                        <DataGridTextColumn Header="进度" Binding="{Binding Progress, StringFormat={}{0:F1}%}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="分辨率" Binding="{Binding ResolutionDisplay}" Width="Auto" MinWidth="80" />
+                        <DataGridTextColumn Header="帧率" Binding="{Binding FrameRateDisplay}" Width="Auto" MinWidth="50" />
+                        <DataGridTextColumn Header="码率" Binding="{Binding VideoBitrateDisplay}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="时长" Binding="{Binding DurationDisplay}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="大小" Binding="{Binding FileSizeDisplay}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="剩余时间" Binding="{Binding Eta}" Width="Auto" MinWidth="70" />
+                        <DataGridTemplateColumn Header="操作" Width="Auto" MinWidth="60">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Content="重试"
