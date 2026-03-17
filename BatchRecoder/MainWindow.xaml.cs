@@ -1,4 +1,4 @@
-using System.Windows;
+﻿﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace BatchRecoder
@@ -15,6 +15,8 @@ namespace BatchRecoder
                 new ScrollChangedEventHandler(OnLogScrollChanged));
             
             LogTextBox.TextChanged += OnLogTextChanged;
+            
+            (DataContext as ViewModels.MainViewModel)?.TryLoadSavedConfig();
         }
 
         private void OnLogScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -42,6 +44,12 @@ namespace BatchRecoder
 
         private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            (DataContext as ViewModels.MainViewModel)?.SaveConfig();
         }
     }
 }

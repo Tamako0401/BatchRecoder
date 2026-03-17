@@ -61,7 +61,14 @@
                           BorderThickness="1"
                           BorderBrush="#EEEEEE">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="*" MinWidth="150" />
+                        <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="*" MinWidth="150">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                    <Setter Property="ToolTip" Value="{Binding FileName}" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                         <DataGridTemplateColumn Header="状态" Width="Auto" MinWidth="80" MaxWidth="200">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

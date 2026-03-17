@@ -47,6 +47,36 @@ namespace BatchRecoder.ViewModels
                 var version = await _ffmpegRunner.GetFFmpegVersionAsync();
                 AppendLog($"当前 FFmpeg 版本：{version}");
             });
+        }        public void TryLoadSavedConfig()
+        {
+            if (!BatchRecoder.Models.ConfigManager.HasSavedConfig()) return;
+            var result = MessageBox.Show(
+                "检测到上次保存的配置，是否加载？",
+                "加载配置",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (result == MessageBoxResult.Yes)
+            {
+                LoadConfig();
+                AppendLog("已加载上次的配置");
+            }
+        }
+        private void LoadConfig()
+        {
+                var config = BatchRecoder.Models.ConfigManager.Load();
+            BatchRecoder.Models.ConfigManager.ApplyToSettings(config, Settings);
+            TargetDirectory = config.TargetDirectory;
+            UseCustomOutputDirectory = config.UseCustomOutputDirectory;
+            CustomOutputDirectory = config.CustomOutputDirectory;
+        }
+        public void SaveConfig()
+        {
+            var config = BatchRecoder.Models.ConfigManager.CreateFromSettings(
+                Settings, 
+                TargetDirectory, 
+                UseCustomOutputDirectory, 
+                CustomOutputDirectory);
+            BatchRecoder.Models.ConfigManager.Save(config);
         }
 
         public ObservableCollection<VideoFileInfo> VideoFiles { get; } = new ObservableCollection<VideoFileInfo>();
@@ -71,8 +101,7 @@ namespace BatchRecoder.ViewModels
                 OnPropertyChanged(nameof(CustomOutputDirectory));
             }
         }
-
-        // Instance properties for binding to resolve "Value cannot be null" in design time/preview
+        
         public System.Collections.Generic.List<string> VideoEncoders => EncoderSettings.VideoEncoders;
         public System.Collections.Generic.List<string> Profiles => EncoderSettings.Profiles;
         public System.Collections.Generic.List<string> Tunes => EncoderSettings.Tunes;
@@ -196,7 +225,7 @@ namespace BatchRecoder.ViewModels
 
                 foreach (var file in files)
                 {
-                    // Allow all video files, even .recoded ones, as source.
+
                     
                     var fileInfo = new FileInfo(file);
                     var video = new VideoFileInfo
@@ -205,21 +234,20 @@ namespace BatchRecoder.ViewModels
                         FileSizeBytes = fileInfo.Length,
                         Status = VideoStatus.Pending
                     };
+                    
+                    // 检查已处理文件是否存在
 
-                    // Check if processed file exists
-                    // For a normal file (video.mp4), processed is video.recoded.
-                    // For a processed file (video.recoded), processed is video.recoded.
+                    // 对于普通文件（video.mp4），已处理的文件是 video.recoded。
+
+                    // 对于已处理文件（video.recoded），已处理的文件是 video.recoded。
                     if (File.Exists(video.ProcessedFilePath))
                     {
-                        // If the processed file exists, mark as processed (skip).
+                        // 如果已处理的文件存在，则标记为已处理（跳过）。
                         video.Status = VideoStatus.Processed;
                         video.Progress = 100;
                     }
                     else if (VideoFileInfo.IsProcessedFile(file))
                     {
-                         // If the file itself IS a processed file (ends with .recoded)
-                         // And ProcessedFilePath check above passed (it points to itself),
-                         // this block is redundant but safe.
                          video.Status = VideoStatus.Processed;
                          video.Progress = 100;
                     }
@@ -335,6 +363,9 @@ namespace BatchRecoder.ViewModels
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
                 AppendLog("队列处理结束");
+                
+                SaveConfig();
+                
                 CommandManager.InvalidateRequerySuggested();
             }
         }

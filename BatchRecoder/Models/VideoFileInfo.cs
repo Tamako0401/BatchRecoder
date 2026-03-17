@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.ComponentModel;
 using System.IO;
 
@@ -45,14 +45,24 @@ namespace BatchRecoder.Models
         }
 
         // 媒体信息
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public double FrameRate { get; set; }
-        public double VideoBitrate { get; set; } // kbps
-        public double AudioBitrate { get; set; } // kbps
-        public TimeSpan Duration { get; set; }
-        public string VideoCodec { get; set; }
-        public string AudioCodec { get; set; }
+        private int _width;
+        private int _height;
+        private double _frameRate;
+        private double _videoBitrate;
+        private double _audioBitrate;
+        private TimeSpan _duration;
+        private string _videoCodec;
+        private string _audioCodec;
+
+        public int Width { get => _width; set { _width = value; OnPropertyChanged(nameof(Width)); OnPropertyChanged(nameof(ResolutionDisplay)); } }
+        public int Height { get => _height; set { _height = value; OnPropertyChanged(nameof(Height)); OnPropertyChanged(nameof(ResolutionDisplay)); } }
+        public double FrameRate { get => _frameRate; set { _frameRate = value; OnPropertyChanged(nameof(FrameRate)); OnPropertyChanged(nameof(FrameRateDisplay)); } }
+        public double VideoBitrate { get => _videoBitrate; set { _videoBitrate = value; OnPropertyChanged(nameof(VideoBitrate)); OnPropertyChanged(nameof(VideoBitrateDisplay)); } } // kbps
+        public double AudioBitrate { get => _audioBitrate; set { _audioBitrate = value; OnPropertyChanged(nameof(AudioBitrate)); } } // kbps
+        public TimeSpan Duration { get => _duration; set { _duration = value; OnPropertyChanged(nameof(Duration)); OnPropertyChanged(nameof(DurationDisplay)); } }
+        public string VideoCodec { get => _videoCodec; set { _videoCodec = value; OnPropertyChanged(nameof(VideoCodec)); } }
+        public string AudioCodec { get => _audioCodec; set { _audioCodec = value; OnPropertyChanged(nameof(AudioCodec)); } }
+        
         public string ResolutionDisplay => Width > 0 ? $"{Width}x{Height}" : "-";
         public string FrameRateDisplay => FrameRate > 0 ? $"{FrameRate:F2} fps" : "-";
         public string VideoBitrateDisplay => VideoBitrate > 0 ? $"{VideoBitrate:F0} kbps" : "-";

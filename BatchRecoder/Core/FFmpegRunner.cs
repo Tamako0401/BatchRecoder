@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BatchRecoder.Models;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace BatchRecoder.Core
 {
@@ -17,7 +17,7 @@ namespace BatchRecoder.Core
     {
         private string _ffmpegPath = "ffmpeg";
         private string _ffprobePath = "ffprobe";
-        private Process _activeProcess; // Keep track of the active process
+        private Process _activeProcess;
 
         [DllImport("ntdll.dll", SetLastError = true)]
         private static extern int NtSuspendProcess(IntPtr processHandle);
@@ -176,7 +176,7 @@ namespace BatchRecoder.Core
              }
         }
 
-        // Add to FFmpegRunner class
+ // 添加到 FFmpegRunner 类
         public async Task<bool> EncodeAsync(VideoFileInfo video, EncoderSettings settings, Action<string> logCallback,
             CancellationToken token, string customOutputDirectory = null)
         {
@@ -195,7 +195,7 @@ namespace BatchRecoder.Core
             if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath);
 
             // Use temp path for ffmpeg output
-            var arguments = settings.BuildArguments(video.FilePath, tempOutputPath);
+            var arguments = "-progress pipe:2 -nostats " + settings.BuildArguments(video.FilePath, tempOutputPath);
 
             logCallback($"开始转码: {video.FileName} -> {arguments}");
 
@@ -221,34 +221,35 @@ namespace BatchRecoder.Core
                     process.ErrorDataReceived += (sender, e) =>
                     {
                         if (string.IsNullOrEmpty(e.Data)) return;
+                        
+                        var parts = e.Data.Split('=');
+                        if (parts.Length != 2) return;
+                        
+                        var key = parts[0].Trim();
+                        var value = parts[1].Trim();
 
-                        // 解析时间: time=00:00:05.12 或 time=00:00:05
-                        // 使用 Regex 提取更稳健
-                        var timeMatch = Regex.Match(e.Data, @"time=\s*(\d{2}:\d{2}:\d{2}(\.\d+)?)");
-                        if (timeMatch.Success)
+                        if (key == "out_time_us") // machine readable time in microseconds
                         {
-                            var timeStr = timeMatch.Groups[1].Value;
-                            if (TimeSpan.TryParse(timeStr, out var currentTime))
+                            if (long.TryParse(value, out var us))
                             {
                                 if (video.Duration.TotalSeconds > 0)
                                 {
-                                    var progress = currentTime.TotalSeconds / video.Duration.TotalSeconds * 100;
+                                    var currentSeconds = us / 1000000.0;
+                                    var progress = currentSeconds / video.Duration.TotalSeconds * 100;
                                     video.Progress = Math.Min(99.9, Math.Max(0, progress));
                                 }
                             }
                         }
-
-                        // 解析速度: speed=1.2x
-                        var speedMatch = Regex.Match(e.Data, @"speed=\s*(\d+(\.\d+)?)x");
-                        if (speedMatch.Success)
+                        else if (key == "speed")
                         {
-                            var speedStr = speedMatch.Groups[1].Value;
-                            if (double.TryParse(speedStr, out var speed) && speed > 0 &&
+                            var speedVal = value.Replace("x", "").Trim();
+                            if (double.TryParse(speedVal, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var speed) && speed > 0 &&
                                 video.Duration.TotalSeconds > 0 && video.Progress > 0)
                             {
-                                var remainingSeconds = video.Duration.TotalSeconds * (100 - video.Progress) / 100 /
-                                                       speed;
-                                video.Eta = TimeSpan.FromSeconds(remainingSeconds).ToString(@"hh\:mm\:ss");
+                                var remainingSeconds = video.Duration.TotalSeconds * (100 - video.Progress) / 100 / speed;
+                                try {
+                                    video.Eta = TimeSpan.FromSeconds(remainingSeconds).ToString(@"hh\:mm\:ss");
+                                } catch { /* Ignore overflow */ }
                             }
                         }
                     };
@@ -271,12 +272,12 @@ namespace BatchRecoder.Core
                     }
                     finally
                     {
-                         _activeProcess = null; // Clear active process
+                         _activeProcess = null; 
                     }
 
                     if (process.ExitCode == 0)
                     {
-                        // Rename temp file to final file on success
+
                         if (File.Exists(tempOutputPath))
                         {
                             if (File.Exists(finalOutputPath)) File.Delete(finalOutputPath);
@@ -287,7 +288,7 @@ namespace BatchRecoder.Core
                         return true;
                     }
 
-                    // On failure, clean up temp file
+
                     if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath);
 
                     logCallback($"FFmpeg 异常退出 代码: {process.ExitCode}");
@@ -353,7 +354,7 @@ namespace BatchRecoder.Core
 
                     if (key == "width" && int.TryParse(value, out var w)) video.Width = w;
                     if (key == "height" && int.TryParse(value, out var h)) video.Height = h;
-                    if (key == "duration" && double.TryParse(value, out var d))
+                    if (key == "duration" && double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
                         video.Duration = TimeSpan.FromSeconds(d);
                     if (key == "codec_name")
                         if (string.IsNullOrEmpty(video.VideoCodec))
@@ -361,16 +362,14 @@ namespace BatchRecoder.Core
                     if (key == "avg_frame_rate")
                     {
                         var frParts = value.Split('/');
-                        if (frParts.Length == 2 && double.TryParse(frParts[0], out var num) &&
-                            double.TryParse(frParts[1], out var den) && den > 0)
+                        if (frParts.Length == 2 && double.TryParse(frParts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var num) &&
+                            double.TryParse(frParts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var den) && den > 0)
                             video.FrameRate = num / den;
-                        else if (double.TryParse(value, out var fr)) video.FrameRate = fr;
+                        else if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var fr)) video.FrameRate = fr;
                     }
 
-                    if (key == "bit_rate" && double.TryParse(value, out var br))
-                        // FFprobe reports bitrate in bits/s, we want kbps maybe? Model says kbps in comments but double type.
-                        // Let's assume bits for now and convert to kbps if needed.
-                        // Usually bit_rate from ffprobe is bits/s.
+                    if (key == "bit_rate" && double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var br))
+                        
                         if (video.VideoBitrate == 0)
                             video.VideoBitrate = br / 1000.0;
                 }
@@ -395,5 +394,5 @@ namespace BatchRecoder.Core
         }
     }
 }
-// Other methods remain unchanged
+
 
