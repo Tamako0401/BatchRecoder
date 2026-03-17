@@ -1,43 +1,67 @@
 ﻿# BatchRecoder
 
-BatchRecoder is a small WPF-based tool that batches FFmpeg jobs, keeps a queue with pause/resume/stop controls, and automatically handles extracting media information from scanned video files.
+BatchRecoder 是一个功能强大的 Windows 批量视频转码工具，基于 WPF 和 FFmpeg 开发。它旨在简化繁琐的视频压制流程，提供直观的队列管理、参数配置和自动化功能。
 
-## Requirements
-- Windows 10/11 with .NET Framework 4.7.2 (or newer) installed.
-- A directory that contains the videos you want to process. Supported extensions include `.mp4`, `.flv`, `.mkv`, `.avi`, `.mov`, `.wmv`, `.ts`, `.webm`, `.m4v`, plus any file ending with `.recoded.*` (e.g., `movie.recoded.mp4`).
+## ✨ 主要功能
 
-## Building & Running
-1. Open `BatchRecoder.sln` in Visual Studio or Rider, then build and run the `BatchRecoder` project.
-2. Alternatively, from the repository root run:
-   ```bash
-   dotnet run --project BatchRecoder/BatchRecoder.csproj
-   ```
+### 🎥 视频转码
+- **多格式支持**：能够处理几乎所有 FFmpeg 支持的视频格式（.mp4, .mkv, .avi, .mov, .flv, .ts 等）。
+- **灵活的编码选项**：
+  - **编码器**：支持 H.264/H.265 (AVC/HEVC) 软解 (x264/x265) 及硬件加速 (NVIDIA NVENC, Intel QSV, AMD AMF)。
+  - **画质控制**：支持 CRF (Constant Rate Factor) 模式，精确平衡体积与画质。
+  - **分辨率调整**：内置 4K, 2K, 1080p, 720p 等常用预设，支持自定义分辨率及等比例缩放。
+  - **帧率控制**：支持 60fps, 30fps 等常用帧率转换。
+  - **音频处理**：支持 AAC 编码或音频流直通 (Copy Audio)。
 
-The UI will automatically download the latest FFmpeg build into the executable directory the first time it runs (you will see download progress logged at the bottom). If FFmpeg is already present, the app reads its version and logs it during startup.
+### 🚀 效率与自动化
+- **自动环境配置**：首次运行若检测不到 FFmpeg，会自动从源站下载并配置环境，开箱即用。
+- **配置记忆**：自动保存用户的转码参数、输出路径等设置，下次启动无缝衔接。
+- **断点续传/覆盖保护**：
+  - 转码过程中生成临时文件 (`.recoded.tmp`)，防止中断导致的文件损坏。
+  - 自动跳过已处理的文件 (`.recoded` 后缀)。
 
-## Key Features
-- **Auto FFmpeg Setup**: Missing `ffmpeg.exe` / `ffprobe.exe` triggers a download from gyan.dev; the progress is logged, and the files are saved next to the executable.
-- **Queue Management with Pause/Resume**: The queue distinguishes between Pending, Queued, Processing, Processed, and Failed states. `Pause` suspends the current FFmpeg process via NT-level calls, while `Stop` cancels the token, clears the queue, and resets statuses back to Pending.
-- **Robust Scan Logic**: Every video file in the target directory (including `*.recoded.*` outputs) appears in the list. Files whose name includes `.recoded` are immediately marked as Processed, and any `.recoded.tmp` leftovers are deleted before scanning so the source file restarts processing from scratch.
-- **Safe File Naming**: Processed outputs are named `source.recoded.ext` and temporary outputs `source.recoded.tmp.ext`, preserving the original extension so FFmpeg knows the proper container. The scanner identifies processed files by checking for the `.recoded` pattern in the base name.
-- **Encoding Parameters**:
-  - Choose among `libx264`, `libx265`, NVENC/QSV/AMF variants, control `CRF`, `preset`, `profile`, `tune`, audio encoder/bitrate, and extra FFmpeg args.
-  - Select whitespace-friendly target resolutions such as 720p/1080p/2k/4k plus 16:9/16:10 aspect ratio scaling or provide a custom width/height.
-  - The UI exposes drop-downs backed by `EncoderSettings` lists to avoid null bindings in the designer.
-- **UI Polish**: The file DataGrid uses lighter grid lines and auto column widths for readability, and the log area auto-truncates past entries to stay responsive.
+### 📊 交互与监控
+- **队列管理**：支持一键扫描目录、开始、停止、暂停和恢复任务。
+- **实时进度**：利用 FFmpeg 机器可读输出，提供精准的进度百分比、处理速度 (Speed) 和剩余时间 (ETA) 估算。
+- **自定义输出**：可将处理后的视频保存在原目录，或指定统一的输出文件夹。
+- **日志系统**：底部实时显示 FFmpeg 详细日志，方便排查转码错误。
 
-## File Life Cycle
-- `source.recoded.tmp.ext` – created while FFmpeg is running. Cancelling or failure removes this file and resets the status so the full job restarts.
-- `source.recoded.ext` – created when FFmpeg completes successfully; any existing file is overwritten. Once the scanner sees this file, the matching source is marked as Processed and skipped.
+## 🛠️ 系统要求
+- **操作系统**: Windows 10 或 Windows 11
+- **运行环境**: .NET Framework 4.7.2 及以上
 
-## Troubleshooting & Tips
-- If FFmpeg exits with `-22`, inspect the generated arguments in the log (the last logged FFmpeg command shows the exact flags passed). Ensure your target resolution makes sense and that the source file path contains no illegal characters.
-- Need to re-run a single file? Select it in the list, wait till it becomes `Failed`, then click **Retry**.
-- Want more control over FFmpeg parameters? Use the **Extra Args** box but keep values space-separated and avoid quotes unless necessary.
+## 📖 使用指南
 
-## Extending the Tool
-- Add more video file extensions to `MainViewModel.ScanDirectoryAsync` if your workflow uses other containers.
-- Extend `EncoderSettings.TargetResolutions` and update the scaling switch to support new presets.
+1. **加载视频**
+   - 点击顶部的“浏览”按钮选择包含视频的**目标目录**。
+   - 点击“扫描”，程序将列出该目录下所有支持的视频文件。
 
-Happy encoding!
+2. **配置参数**
+   - 在右侧面板设置目标编码器、分辨率、CRF 值等。
+   - **Tip**: CRF数值越小画质越好体积越大，推荐范围 18-28。
+   - 如需指定输出位置，勾选“使用自定义输出目录”并选择路径。
+
+3. **执行任务**
+   - 点击“开始处理”，程序将依次处理队列中的文件。
+   - 处理过程中可随时“暂停/继续”或“停止”。
+   - 还可以对失败的任务点击“重试”。
+
+## ⚙️ 常见问题
+
+- **Q: 为什么进度条一开始是 0%？**
+  - A: 进度计算依赖于视频总时长。如果视频文件元数据损坏导致 FFprobe 无法读取时长，进度条可能无法正常显示，但这通常不影响转码结果。
+
+- **Q: 硬件编码没生效？**
+  - A: 请确保您的显卡驱动已更新，且显卡支持选定的编码格式（如 NVENC H.264）。
+
+- **Q: 如何重置设置？**
+  - A: 配置文件保存在 `%AppData%\BatchRecoder\config.json`，删除该文件即可重置所有选项。
+
+## 🏗️ 构建说明
+
+使用 Visual Studio 2019 或更高版本打开 `BatchRecoder.sln` 即可编译。
+项目依赖 `Newtonsoft.Json` 用于配置文件处理。
+
+---
+*Happy Encoding!*
 
